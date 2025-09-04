@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Happy Birthday Mumu — Surprise</title>
+<style>
+  :root{
+    --bg:#060014;
+    --accent:#ff5da2;
+    --accent-2:#ffb3d6;
+    --card:#fff;
+    --text-dark:#111;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,Segoe UI,system-ui,Arial;}
+  body{
+    background: linear-gradient(180deg,var(--bg) 0%, #180020 100%);
+    color:#fff;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* Generic page container */
+  .scene { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  .hidden { opacity:0; pointer-events:none; transition:opacity .3s ease; }
+  .visible { opacity:1; pointer-events:auto; transition:opacity .3s ease; }
+
+  /* --- Page 1: Surprise animation --- */
+  #page1 { background:transparent; z-index:10; }
+  .text-part { position:absolute; font-size:3.4rem; font-weight:800; color:var(--accent); opacity:0; transform:scale(.6); animation:flyIn 1.6s forwards cubic-bezier(.2,.9,.25,1); text-shadow:0 4px 10px rgba(0,0,0,.6); }
+  .text-part.emoji { font-size:3.6rem; color:#ffd27a; text-shadow:0 6px 18px rgba(0,0,0,.6); }
+  @keyframes flyIn {
+    from { opacity:0; transform: translate(var(--x), var(--y)) scale(.6); }
+    to { opacity:1; transform: translate(0,0) scale(1); }
+  }
+  .sparkle { position:absolute; width:8px; height:8px; border-radius:50%; background:gold; opacity:.95; animation:tw 1.4s infinite ease-in-out; }
+  @keyframes tw { 0%,100%{transform:scale(.5);opacity:.5}50%{transform:scale(1.4);opacity:1}}
+
+  /* --- Pages 2 & 3: Giftcard container --- */
+  .cards-wrap { width:100%; max-width:1100px; margin:0 auto; display:grid; grid-template-columns: 1fr; gap:18px; align-items:center; justify-items:center; padding:30px; box-sizing:border-box; }
+  .card {
+    width:90%; max-width:900px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(250,245,255,0.96));
+    color:var(--text-dark);
+    border-radius:18px;
+    padding:26px;
+    box-shadow:0 18px 60px rgba(0,0,0,.45);
+    transform-origin:center;
+    position:relative;
+    overflow:hidden;
+  }
+  .card h2{ margin:0 0 8px 0; color:#111; font-size:1.6rem;}
+  .card .hint{ font-size:.95rem; color:#333; margin-bottom:12px;}
+  .card .gift-body { font-size:1.05rem; line-height:1.7; max-height:0; overflow:hidden; transition:max-height .7s ease, opacity .6s ease; opacity:0; }
+  .card.open .gift-body { max-height:1000px; opacity:1; }
+  .unwrap-btn {
+    appearance:none; border:0; background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    color:#fff; padding:12px 18px; border-radius:12px; font-weight:700;
+    cursor:pointer; box-shadow:0 8px 18px rgba(255,93,162,.25); margin-top:10px;
+  }
+  .next-btn { background:#222; color:#fff; padding:10px 14px; border-radius:10px; margin-left:8px; cursor:pointer; border:0; }
+
+  /* Confetti / emoji burst */
+  .burst {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:4rem; pointer-events:none;
+    opacity:0; transition:opacity .2s ease;
+  }
+
+  /* --- Cake Scene --- */
+  #cake-scene { background: linear-gradient(180deg,#fff7fb 0%, #ffeef7 100%); flex-direction:column; gap:18px; z-index:50; padding:28px; }
+  .cake-stage{ width:100%; max-width:980px; display:flex; gap:20px; align-items:flex-start; justify-content:center; flex-direction:column; }
+  .cake-wrap { width:100%; display:flex; align-items:center; justify-content:center; position:relative; min-height:420px; }
+  /* cake base (SVG container will be inside) */
+  .controls { display:flex; gap:12px; align-items:center; justify-content:center; margin-top:8px; }
+  .control-btn{ background:var(--accent); color:#fff; border:0; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; }
+  .control-btn.secondary { background:#333; }
+
+  /* Knife - draggable */
+  .knife {
+    width:140px; height:36px; border-radius:8px; position:fixed; top:18px; right:18px; display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(90deg,#e0e0e0,#bdbdbd); box-shadow:0 6px 20px rgba(0,0,0,.35); cursor:grab; z-index:120;
+    user-select:none; touch-action:none;
+    transform:translate(0,0) rotate(-10deg);
+  }
+  .knife:active{ cursor:grabbing; }
+  .knife .blade{ width:70px; height:6px; background:linear-gradient(90deg,#fff,#aaa); border-radius:3px;}
+  .knife.hidden{ display:none; }
+
+  /* Cake slice (to animate out) */
+  .slice {
+    position:absolute; left:50%; top:44%; transform:translate(-50%, -30%); width:260px; height:160px; pointer-events:none;
+    transition: transform 1s cubic-bezier(.2,.9,.3,1), opacity .8s ease;
+    opacity:0;
+  }
+  .slice.cut { transform: translate(160px, -10px) rotate(6deg); opacity:1; }
+
+  /* Candle flames */
+  .candles { position:absolute; left:50%; top:24%; transform:translateX(-50%); display:flex; gap:10px; }
+  .candle { width:12px; height:38px; background:#fff; border-radius:3px; position:relative; display:flex; justify-content:center; align-items:flex-start; cursor:pointer; }
+  .candle .flame { width:10px; height:14px; background:linear-gradient(180deg,#ffd36b,#ff7b2f); border-radius:50% 50% 40% 40%; margin-top:-10px; box-shadow:0 6px 12px rgba(255,140,0,.35); animation:flame 900ms infinite; }
+  .candle.off .flame { display:none; }
+  @keyframes flame { 0%{transform:scale(.9) translateY(0)}50%{transform:scale(1.12) translateY(-3px)}100%{transform:scale(.9) translateY(0)} }
+
+  /* Names on cake */
+  .cake-label { position:absolute; left:50%; top:62%; transform:translateX(-50%); font-weight:800; font-size:1.2rem; color:#6a1b4d; text-transform:uppercase; letter-spacing:1px; }
+
+  /* small responsive */
+  @media (max-width:640px){
+    .text-part{font-size:2.4rem}
+    .knife{width:110px}
+    .slice{width:200px;height:120px}
+  }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1 (surprise animation) -->
+<section id="page1" class="scene visible">
+  <div class="text-part" style="--x:-100vw; --y:-100vh; left:10%; top:10%; animation-delay:0s;">H</div>
+  <div class="text-part" style="--x:100vw; --y:-100vh; right:10%; top:12%; animation-delay:.3s;">a</div>
+  <div class="text-part" style="--x:-100vw; --y:100vh; left:8%; bottom:12%; animation-delay:.6s;">p</div>
+  <div class="text-part" style="--x:100vw; --y:100vh; right:8%; bottom:10%; animation-delay:.9s;">p</div>
+  <div class="text-part" style="--x:-100vw; --y:0; left:2%; top:50%; animation-delay:1.2s;">y</div>
+  <div class="text-part emoji" style="--x:100vw; --y:0; right:2%; top:50%; animation-delay:1.5s;">🎂</div>
+
+  <!-- sparkles -->
+  <script>
+    // create sparkles dynamically for page1
+    (function createSparkles(){
+      const doc = document;
+      for(let i=0;i<28;i++){
+        const s=document.createElement('div');
+        s.className='sparkle';
+        s.style.left=(Math.random()*100)+'%';
+        s.style.top=(Math.random()*100)+'%';
+        s.style.width=(6+Math.random()*10)+'px';
+        s.style.height=s.style.width;
+        s.style.opacity=(.4+Math.random()*.7);
+        s.style.animationDelay=(Math.random()*1.2)+'s';
+        document.getElementById('page1').appendChild(s);
+      }
+    })();
+  </script>
+</section>
+
+<!-- PAGES 2 & 3 -> gift cards -->
+<section id="gift-pages" class="scene hidden" style="z-index:20;">
+  <div class="cards-wrap">
+    <!-- Card 1 -->
+    <div class="card" id="card1">
+      <h2>On this special day...</h2>
+      <div class="hint">Press Unwrap to open your gift card</div>
+      <button class="unwrap-btn" data-card="1">Unwrap</button>
+      <button class="next-btn" style="display:none;" data-next="1">Next</button>
+      <div class="gift-body" id="body1">
+        I just want to remind you how truly amazing you are.
+        You are more than just my best friend—you are my safe place, my constant support,
+        and one of the brightest lights in my life. Every laugh we’ve shared, every memory
+        we’ve created, and every little moment we’ve spent together are treasures I’ll keep forever.
+      </div>
+      <div class="burst" id="burst1">🎉</div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="card" id="card2">
+      <h2>Dear Mumu ❤️</h2>
+      <div class="hint">A little more from my heart — unwrap it!</div>
+      <button class="unwrap-btn" data-card="2">Unwrap</button>
+      <button class="next-btn" style="display:none;" data-next="2">Next</button>
+      <div class="gift-body" id="body2">
+        Mumu, you deserve a birthday filled with endless love, laughter, surprises,
+        and happiness that never fades. May all your dreams take flight this year, and may life
+        bless you with everything your heart truly desires. You are kind, strong, beautiful inside and out,
+        and I am so grateful to walk through this journey of life with you by my side.
+      </div>
+      <div class="burst" id="burst2">🎉</div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="card" id="card3">
+      <h2>Always remember...</h2>
+      <div class="hint">One last note — unwrap and celebrate!</div>
+      <button class="unwrap-btn" data-card="3">Unwrap</button>
+      <button class="next-btn" style="display:none;" data-next="3">See Cake</button>
+      <div class="gift-body" id="body3">
+        Always remember: no matter where life takes us, I’ll always be here cheering you on,
+        celebrating your wins, lifting you up on hard days, and making sure you never forget just
+        how special you are. So today, let’s celebrate YOU—the wonderful, one-of-a-kind soul that
+        makes the world a better place just by being in it. 🌸🎂🎁✨
+        <br><br><strong>Happy Birthday once again, my dearest Mumu. May this year be your best one yet! 🥳❤️</strong>
+      </div>
+      <div class="burst" id="burst3">🎉</div>
+    </div>
+  </div>
+</section>
+
+<!-- CAKE SCENE -->
+<section id="cake-scene" class="scene hidden" aria-hidden="true">
+  <div class="cake-stage">
+    <div style="text-align:center; color:#6a163f; font-weight:900; font-size:1.9rem; margin-bottom:6px;">Open the cake and celebrate — Jannatul Mawa (MUMU)</div>
+    <div class="cake-wrap">
+      <!-- SVG cake (base + slice as a separate group for cut) -->
+      <svg id="cakeSVG" width="620" height="420" viewBox="0 0 620 420" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;">
+        <!-- shadow -->
+        <ellipse cx="310" cy="370" rx="180" ry="22" fill="rgba(0,0,0,0.25)"></ellipse>
+
+        <!-- whole cake base group -->
+        <g id="cakeWhole" transform="translate(0,0)">
+          <!-- bottom plate -->
+          <ellipse cx="310" cy="320" rx="220" ry="36" fill="#f4f1f5"/>
+          <!-- cake bottom tier -->
+          <rect x="120" y="200" width="380" height="120" rx="36" fill="#ffdce6" stroke="#f2b3cf" stroke-width="3"/>
+          <!-- frosting top -->
+          <path d="M120 200 q30 -40 80 0 q40 -36 110 0 q60 -36 90 0 q40 -40 120 0 v18 h-480z" fill="#fff8f9"/>
+          <!-- top layer -->
+          <ellipse cx="310" cy="190" rx="160" ry="36" fill="#ffdce6" stroke="#f2b3cf" stroke-width="2.5" />
+        </g>
+
+        <!-- slice group (will animate out when cut) -->
+        <g id="slice" class="slice" transform="translate(0,0)" style="opacity:0;">
+          <!-- slice shadow -->
+          <ellipse cx="460" cy="330" rx="60" ry="12" fill="rgba(0,0,0,0.15)"></ellipse>
+          <path d="M310 200 L460 240 L460 320 L310 320 z" fill="#ffdce6" stroke="#f2b3cf" stroke-width="2"/>
+          <path d="M310 200 L460 240 L430 218 L310 180 z" fill="#fff8f9" opacity=".95"/>
+        </g>
+
+        <!-- top candles area (we will overlay HTML candles for click) -->
+      </svg>
+
+      <!-- Candle HTML overlay (clickable) -->
+      <div class="candles" id="candles" style="pointer-events:auto;">
+        <!-- we'll generate 5 candles -->
+      </div>
+
+      <!-- cake label -->
+      <div class="cake-label">Jannatul Mawa — MUMU</div>
+    </div>
+
+    <!-- controls -->
+    <div class="controls">
+      <button class="control-btn" id="revealCakeBtn">Reveal Cake</button>
+      <button class="control-btn secondary" id="cutBtn">Cut</button>
+    </div>
+
+    <!-- draggable knife -->
+    <div id="knife" class="knife hidden" role="button" aria-label="Drag to cut">
+      <div class="blade"></div>
+    </div>
+  </div>
+</section>
+
+<!-- audio (no external files) - we'll use WebAudio to play a small melody -->
+<script>
+/* ---------- Utility: simple melody via WebAudio ---------- */
+class TinyPlayer {
+  constructor() {
+    this.ctx = null;
+    this.gain = null;
+  }
+  ensure(){
+    if(!this.ctx){
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.gain = this.ctx.createGain();
+      this.gain.gain.value = 0.18;
+      this.gain.connect(this.ctx.destination);
+    }
+  }
+  playNote(freq, time, dur){
+    this.ensure();
+    const o = this.ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(1, time + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+    o.connect(g); g.connect(this.gain);
+    o.start(time); o.stop(time + dur + 0.02);
+  }
+  playMelody(){
+    this.ensure();
+    const now = this.ctx.currentTime + 0.02;
+    const notes = [ 392, 392, 440, 392, 523, 494,
+                    392, 392, 440, 392, 587, 523,
+                    392, 392, 784, 659, 523, 494, 440,
+                    698, 698, 659, 523, 587, 523 ];
+    let t = now;
+    for(let i=0;i<notes.length;i++){
+      this.playNote(notes[i], t, i%6===5 ? 0.34 : 0.22);
+      t += 0.28;
+    }
+  }
+}
+const player = new TinyPlayer();
+
+/* ---------- Page flow logic ---------- */
+(function(){
+  const page1 = document.getElementById('page1');
+  const giftPages = document.getElementById('gift-pages');
+  const cakeScene = document.getElementById('cake-scene');
+
+  // After 10s show gift cards (as earlier spec)
+  setTimeout(()=> {
+    page1.classList.remove('visible'); page1.classList.add('hidden');
+    giftPages.classList.remove('hidden'); giftPages.classList.add('visible');
+  }, 10000);
+
+  // Unwrap behavior
+  const unwrapButtons = document.querySelectorAll('.unwrap-btn');
+  unwrapButtons.forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const id = btn.dataset.card;
+      const card = document.getElementById('card' + id);
+      const burst = card.querySelector('.burst');
+      // quick burst effect
+      burst.style.opacity = 1;
+      burst.style.transform = 'scale(1)';
+      burst.style.transition = 'opacity .2s linear, transform .2s ease';
+      // play short melody snippet
+      try { player.playMelody(); } catch(e){}
+      setTimeout(()=> {
+        burst.style.opacity = 0;
+        burst.style.transform = 'scale(.6)';
+      }, 900);
+      // reveal card text after short delay
+      setTimeout(()=> {
+        card.classList.add('open');
+        // show Next or See Cake button
+        const next = card.querySelector('.next-btn');
+        next.style.display = 'inline-block';
+        // hide unwrap button
+        btn.style.display = 'none';
+      }, 600);
+    });
+  });
+
+  // Next buttons
+  const nextButtons = document.querySelectorAll('.next-btn');
+  nextButtons.forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      const which = btn.dataset.next;
+      // if last -> show cake
+      if(which==='3'){
+        // hide gifts, show cake-scene
+        giftPages.classList.remove('visible'); giftPages.classList.add('hidden');
+        setTimeout(()=> {
+          giftPages.style.display='none';
+          cakeScene.classList.remove('hidden'); cakeScene.classList.add('visible');
+          cakeScene.setAttribute('aria-hidden','false');
+        }, 500);
+      } else {
+        // scroll to next card (simple smooth scroll)
+        const nextIndex = parseInt(which,10)+1;
+        const target = document.getElementById('card'+nextIndex);
+        if(target) target.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    });
+  });
+
+  /* ---------- Cake scene behavior ---------- */
+  // generate candles
+  const candlesContainer = document.getElementById('candles');
+  const candleCount = 5;
+  const candleEls = [];
+  for(let i=0;i<candleCount;i++){
+    const c = document.createElement('div');
+    c.className='candle';
+    c.dataset.index = i;
+    const flame = document.createElement('div');
+    flame.className='flame';
+    c.appendChild(flame);
+    candlesContainer.appendChild(c);
+    candleEls.push(c);
+  }
+
+  // Clicking a candle toggles flame
+  candlesContainer.addEventListener('click', (ev)=>{
+    const c = ev.target.closest('.candle');
+    if(!c) return;
+    c.classList.toggle('off');
+  });
+
+  // Reveal Cake button: plays melody and shows cake fully (we already have cake)
+  const revealCakeBtn = document.getElementById('revealCakeBtn');
+  revealCakeBtn.addEventListener('click', ()=>{
+    revealCakeBtn.animate([{ transform:'scale(1)' },{transform:'scale(1.06)'},{transform:'scale(1)'}],{duration:600});
+    try { player.playMelody(); } catch(e){}
+    const burst = document.createElement('div');
+    burst.className='burst';
+    burst.textContent='🎊';
+    burst.style.fontSize='3.8rem';
+    burst.style.opacity=1;
+    const cakeWrap = document.querySelector('.cake-wrap');
+    cakeWrap.appendChild(burst);
+    setTimeout(()=> burst.remove(),900);
+  });
+
+  /* ---------- Knife dragging & cut detection ---------- */
+  const knife = document.getElementById('knife');
+  const cutBtn = document.getElementById('cutBtn');
+  const slice = document.getElementById('slice');
+  const cakeSVG = document.getElementById('cakeSVG');
+  const cakeWhole = document.getElementById('cakeWhole');
+
+  let alreadyCut = false;
+
+  cutBtn.addEventListener('click', ()=>{
+    // show knife
+    knife.classList.remove('hidden');
+    // bring to visible area
+    knife.style.left = (window.innerWidth - 180) + 'px';
+    knife.style.top = '18px';
+    // hint pulse
+    knife.animate([{ transform:'translate(0,0) rotate(-10deg)' },{ transform:'translate(-6px,6px) rotate(-6deg)' },{transform:'translate(0,0) rotate(-10deg)'}],{duration:700,iterations:1});
+    try { player.playMelody(); } catch(e){}
+  });
+
+  // Drag implementation for knife (pointer events)
+  let dragging = false;
+  let offX=0, offY=0;
+  knife.addEventListener('pointerdown', (e)=>{
+    dragging = true;
+    knife.setPointerCapture(e.pointerId);
+    offX = e.clientX - knife.getBoundingClientRect().left;
+    offY = e.clientY - knife.getBoundingClientRect().top;
+    knife.style.transition = 'none';
+  });
+  window.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    e.preventDefault();
+    const x = e.clientX - offX;
+    const y = e.clientY - offY;
+    // constrain to window
+    const maxX = window.innerWidth - knife.offsetWidth - 6;
+    const maxY = window.innerHeight - knife.offsetHeight - 6;
+    knife.style.left = Math.max(6, Math.min(maxX, x)) + 'px';
+    knife.style.top = Math.max(6, Math.min(maxY, y)) + 'px';
+  });
+  window.addEventListener('pointerup', (e)=>{
+    if(!dragging) return;
+    dragging=false;
+    try{ knife.releasePointerCapture(e.pointerId); } catch(err){}
+    // detect if knife was released overlapping cake center region
+    const rect = cakeSVG.getBoundingClientRect();
+    const krect = knife.getBoundingClientRect();
+    // pick a point on knife tip (approx)
+    const tipX = krect.left + krect.width/2;
+    const tipY = krect.top + krect.height/2;
+    // simple bounding: if tip within cake svg area (tuned)
+    if(!alreadyCut && tipX > rect.left + 200 && tipX < rect.right - 120 && tipY > rect.top + 110 && tipY < rect.bottom - 40){
+      // perform cut: animate slice out
+      performCut();
+    } else {
+      // little shake
+      knife.animate([{ transform:'translate(0,0) rotate(-10deg)' }, { transform:'translate(-6px,6px) rotate(-6deg)' },{transform:'translate(0,0) rotate(-10deg)'}], {duration:400});
+    }
+  });
+
+  function performCut(){
+    if(alreadyCut) return;
+    alreadyCut = true;
+    // make sli
